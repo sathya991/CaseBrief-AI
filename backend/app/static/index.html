@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CaseBrief AI | Evidence review</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0c13;
+      color: #e9ebf4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 85% 0%, #25335c 0, transparent 38rem), #0a0c13;
+    }
+    main { max-width: 990px; margin: auto; padding: clamp(28px, 6vw, 56px) 22px 68px; }
+    h1 { font-size: clamp(36px, 7vw, 58px); line-height: 1.04; letter-spacing: -.045em; margin: 12px 0; }
+    h2 { font-size: 21px; margin: 0; }
+    h3 { font-size: 17px; margin: 0; overflow-wrap: anywhere; }
+    .brand { margin: 0; color: #a9c3ff; font-size: 14px; font-weight: 700; }
+    .muted { color: #b0b9cd; line-height: 1.55; }
+    .hint { color: #b0b9cd; font-size: 13px; line-height: 1.5; }
+    .panel {
+      margin-top: 22px;
+      padding: clamp(16px, 4vw, 26px);
+      border: 1px solid #30384d;
+      border-radius: 18px;
+      background: #141928;
+    }
+    .row, .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .row { justify-content: space-between; }
+    .actions { margin-top: 19px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .drop {
+      display: block;
+      text-align: center;
+      border: 1px dashed #62749c;
+      background: #101726;
+      border-radius: 12px;
+      padding: 24px 14px;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+    .drop .hint { display: block; margin-top: 5px; }
+    .drop:hover, .drop.drag { background: #18233a; border-color: #a9c3ff; }
+    :focus-visible, #pdfs:focus-visible + .drop { outline: 2px solid #c4d4ff; outline-offset: 4px; }
+    .files { margin: 12px 0 17px; font-size: 13px; color: #d1ddf9; overflow-wrap: anywhere; }
+    .field-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 650; }
+    input[type=text], textarea {
+      width: 100%;
+      padding: 9px 11px;
+      font: inherit;
+      color: inherit;
+      border: 1px solid #4c5975;
+      border-radius: 8px;
+      background: #0d1220;
+    }
+    input[type=text] { max-width: 470px; }
+    input[type=checkbox] { accent-color: #a9c3ff; }
+    textarea { min-height: 68px; resize: vertical; }
+    button {
+      border: 1px solid transparent;
+      border-radius: 9px;
+      padding: 10px 15px;
+      background: #a9c3ff;
+      color: #101a31;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: #c4d4ff; }
+    button.secondary { border-color: #607194; background: transparent; color: #d8e3ff; }
+    button.secondary:hover:not(:disabled) { background: #25314b; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .error { color: #ffb0b0; margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .finding, .doc {
+      margin-top: 14px;
+      padding: clamp(12px, 3vw, 18px);
+      border: 1px solid #35405b;
+      border-radius: 11px;
+      background: #101522;
+    }
+    .finding p { margin: 8px 0; }
+    .citations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .citation {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #303c57;
+      border-radius: 8px;
+      background: #0d1220;
+    }
+    .citation h4 { margin: 0; }
+    .citation .hint { display: block; margin: 5px 0; overflow-wrap: anywhere; }
+    blockquote, pre { margin: 9px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    blockquote { font-size: 14px; line-height: 1.5; color: #dbe3f6; }
+    pre {
+      max-height: 320px;
+      overflow: auto;
+      padding: 10px;
+      border-radius: 6px;
+      background: #090d17;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: #c4d4ff; font-weight: 600; }
+    .decision { border-top: 1px solid #303c57; margin-top: 15px; padding-top: 12px; }
+    .decision > label:first-child { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .warning { color: #ffd7a3; }
+    .ok { color: #aff1c5; }
+    footer { margin-top: 22px; }
+    .print-only { display: none; }
+    @media print {
+      @page {
+        margin: 16mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font: 9pt sans-serif;
+          color: #465266;
+        }
+      }
+      :root { color-scheme: light; background: white; color: #172234; }
+      body { background: white; }
+      main.has-review { max-width: none; margin: 0; padding: 0; font-size: 10pt; line-height: 1.4; }
+      main.has-review > :not(.print-only, #review-results),
+      main.has-review .screen-only,
+      #review-results details { display: none; }
+      main.has-review .print-only:not([hidden]) { display: block; }
+      #report-heading { margin: 3pt 0 5pt; font-size: 25pt; line-height: 1.1; }
+      #report-header, #report-documents { margin-bottom: 12pt; break-inside: avoid; }
+      #report-header p, #report-documents ul { margin: 0; }
+      #report-documents ul { padding-inline-start: 15pt; overflow-wrap: anywhere; }
+      #review-results { margin: 0; padding: 0; border: 0; background: transparent; }
+      #review-results .row { margin-bottom: 5pt; }
+      #review-results h2, #report-documents h2 { font-size: 13pt; }
+      #review-results h3 { font-size: 11pt; }
+      #review-results h4 { font-size: 10pt; }
+      #review-results :is(h2, h3, h4) { break-after: avoid; }
+      #review-results .finding {
+        margin-top: 9pt;
+        padding: 8pt 0 0;
+        border: 0;
+        border-top: 1pt solid #a4afbf;
+        border-radius: 0;
+        background: transparent;
+      }
+      #review-results .finding p { margin: 3pt 0; overflow-wrap: anywhere; }
+      #review-results .hint, #review-results .warning, #review-results .ok {
+        color: #34445b;
+        font-size: 9pt;
+      }
+      #review-results .report-status { font-weight: 700; break-after: avoid; }
+      #review-results .citations { display: block; margin: 6pt 0 0; }
+      #review-results .citation {
+        margin: 6pt 0;
+        padding: 0 0 0 8pt;
+        border: 0;
+        border-left: 1pt solid #a4afbf;
+        border-radius: 0;
+        background: transparent;
+        break-inside: avoid;
+      }
+      #review-results .citation .hint { margin: 1pt 0 2pt; }
+      #review-results blockquote { margin: 0; font-size: 10pt; line-height: 1.35; color: inherit; }
+      #review-results .report-note { margin-top: 8pt; }
+      #review-results .report-note p { white-space: pre-wrap; orphans: 3; widows: 3; }
+    }
+  </style>
+</head>
+<body>
+  <main id="case-review">
+    <header>
+      <p class="brand">CaseBrief AI</p>
+      <h1>Case evidence review</h1>
+      <p class="muted">Compare fictional case documents and inspect the passages behind each finding.</p>
+    </header>
+    <section class="panel" aria-labelledby="upload-heading">
+      <h2 id="upload-heading">Case documents</h2>
+      <input class="visually-hidden" type="file" id="pdfs" accept=".pdf,application/pdf" multiple />
+      <label class="drop" id="drop" for="pdfs">
+        <strong>Choose PDFs or drop them here</strong>
+        <span class="hint">Up to 10 PDFs, 10 MiB each</span>
+      </label>
+      <p class="files" id="selected" aria-live="polite">No files selected</p>
+      <label class="field-label" for="award-name">Award name <span class="hint">(optional)</span></label>
+      <input type="text" id="award-name" maxlength="200" aria-describedby="award-help" />
+      <p class="hint" id="award-help">Enter the award name as written to check for documented selection criteria.</p>
+      <div class="actions">
+        <button type="button" id="review" disabled>Review evidence</button>
+        <button type="button" class="secondary" id="upload" disabled>Extract page text</button>
+        <span class="hint" id="state" role="status">Evidence review requires two PDFs and local Ollama.</span>
+      </div>
+      <p class="error" id="error" role="alert" hidden></p>
+    </section>
+    <header id="report-header" class="print-only">
+      <p>CaseBrief AI</p>
+      <h1 id="report-heading">Case review report</h1>
+      <p>Fictional case for evidence preparation and attorney review.</p>
+    </header>
+    <section id="report-documents" class="print-only" aria-labelledby="report-documents-heading">
+      <h2 id="report-documents-heading">Documents reviewed</h2>
+      <ul id="report-document-list"></ul>
+    </section>
+    <section id="review-results" class="panel" aria-labelledby="review-heading" hidden>
+      <div class="row">
+        <h2 id="review-heading">Evidence findings</h2>
+        <div class="hint" id="progress" role="status"></div>
+        <button type="button" id="print-report" class="secondary screen-only">Print / Save as PDF</button>
+      </div>
+      <p class="hint screen-only">Review marks and notes are kept on this page until a new review, file selection, or reload.</p>
+      <div id="findings"></div>
+    </section>
+    <section id="source-results" class="panel" aria-labelledby="sources-heading" hidden>
+      <h2 id="sources-heading">Source pages</h2>
+      <p class="hint" id="stats"></p>
+      <div id="document-results"></div>
+    </section>
+    <footer class="hint">Fictional data only. For evidence preparation and attorney review.</footer>
+  </main>
+  <script>
+    const caseReview = document.getElementById('case-review');
+    const choose = document.getElementById('pdfs');
+    const drop = document.getElementById('drop');
+    const upload = document.getElementById('upload');
+    const review = document.getElementById('review');
+    const awardName = document.getElementById('award-name');
+    const selected = document.getElementById('selected');
+    const state = document.getElementById('state');
+    const error = document.getElementById('error');
+    const sourceResults = document.getElementById('source-results');
+    const reviewResults = document.getElementById('review-results');
+    const findings = document.getElementById('findings');
+    const progress = document.getElementById('progress');
+    const documentResults = document.getElementById('document-results');
+    const reportDocumentList = document.getElementById('report-document-list');
+    const printReport = document.getElementById('print-report');
+    let chosen = [];
+    let busy = false;
+
+    function el(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function updateControls() {
+      choose.disabled = busy;
+      awardName.disabled = busy;
+      upload.disabled = busy || chosen.length === 0 || chosen.length > 10;
+      review.disabled = upload.disabled || chosen.length < 2;
+    }
+
+    function setFiles(files) {
+      if (busy) return;
+      chosen = Array.from(files);
+      selected.textContent = chosen.length ? chosen.map(file => file.name).join(' · ') : 'No files selected';
+      state.textContent = chosen.length > 10
+        ? 'Choose up to 10 PDFs.'
+        : 'Evidence review requires two PDFs and local Ollama.';
+      findings.replaceChildren();
+      documentResults.replaceChildren();
+      reportDocumentList.replaceChildren();
+      caseReview.classList.remove('has-review');
+      sourceResults.hidden = true;
+      reviewResults.hidden = true;
+      error.hidden = true;
+      updateControls();
+    }
+
+    choose.addEventListener('change', () => setFiles(choose.files));
+    for (const eventName of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+      drop.addEventListener(eventName, event => {
+        event.preventDefault();
+        drop.classList.toggle('drag', !busy && (event.type === 'dragenter' || event.type === 'dragover'));
+        if (event.type === 'drop' && !busy) {
+          choose.value = '';
+          setFiles(event.dataTransfer.files);
+        }
+      });
+    }
+
+    function pageDisclosure(label, text) {
+      const details = el('details');
+      details.append(el('summary', null, label), el('pre', null, text || '(No extractable text)'));
+      return details;
+    }
+
+    function renderDocuments(documents) {
+      const totalPages = documents.reduce((total, doc) => total + doc.page_count, 0);
+      document.getElementById('stats').textContent = `${documents.length} PDFs · ${totalPages} pages`;
+      documentResults.replaceChildren();
+      for (const doc of documents) {
+        const item = el('article', 'doc');
+        item.append(el('h3', null, doc.filename));
+        for (const warning of doc.warnings) item.append(el('p', 'hint warning', warning));
+        for (const page of doc.pages) {
+          item.append(pageDisclosure(`Page ${page.page_number}`, page.text));
+        }
+        documentResults.append(item);
+      }
+      sourceResults.hidden = false;
+    }
+
+    function renderCitation(label, citation, documentsById) {
+      const item = el('article', 'citation');
+      item.append(
+        el('h4', null, label),
+        el('span', 'hint', `${citation.filename} · Page ${citation.page_number}`),
+        el('blockquote', null, citation.quote),
+      );
+      const source = documentsById.get(citation.document_id);
+      const page = source?.pages.find(page => page.page_number === citation.page_number);
+      if (page) item.append(pageDisclosure('Read full page text', page.text));
+      return item;
+    }
+
+    function updateProgress() {
+      const decisions = findings.querySelectorAll('input[type=checkbox]');
+      const reviewed = findings.querySelectorAll('input[type=checkbox]:checked').length;
+      progress.textContent = `Reviewed ${reviewed} of ${decisions.length}`;
+    }
+
+    function addDecision(card, index) {
+      const decision = el('div', 'decision screen-only');
+      const checkLabel = el('label');
+      const check = el('input');
+      check.type = 'checkbox';
+      check.addEventListener('change', updateProgress);
+      checkLabel.append(check, el('span', null, 'Mark as reviewed'));
+
+      const noteLabel = el('label', 'field-label', 'Reviewer note (optional)');
+      const note = el('textarea');
+      note.id = `reviewer-note-${index}`;
+      noteLabel.htmlFor = note.id;
+      decision.append(checkLabel, noteLabel, note);
+
+      const reportStatus = el('p', 'print-only report-status');
+      card.querySelector('h3').after(reportStatus);
+      const reportNote = el('div', 'print-only report-note');
+      reportNote.hidden = true;
+      reportNote.append(el('h4', null, 'Reviewer note'), el('p'));
+      card.append(decision, reportNote);
+    }
+
+    function renderFindings(data) {
+      const documentsById = new Map(data.documents.map(doc => [doc.document_id, doc]));
+      const monthFormat = new Intl.DateTimeFormat('en', {month: 'long', year: 'numeric', timeZone: 'UTC'});
+      const cards = [];
+
+      for (const discrepancy of data.possible_discrepancies) {
+        const card = el('article', 'finding');
+        card.append(
+          el('h3', null, 'Possible employment start date discrepancy'),
+          el('p', 'hint', `${discrepancy.person} · ${discrepancy.employer}`),
+        );
+        const citations = el('div', 'citations');
+        for (const observation of discrepancy.observations) {
+          const month = monthFormat.format(new Date(`${observation.start_month}-01T00:00:00Z`));
+          citations.append(renderCitation(month, observation.citation, documentsById));
+        }
+        card.append(citations);
+        cards.push(card);
+      }
+
+      const statusText = {
+        found: 'Selection criteria found',
+        not_found: 'Selection criteria not found in the searched evidence',
+        needs_review: 'Selection criteria need review',
+      };
+      for (const check of data.evidence_checks) {
+        const card = el('article', 'finding');
+        card.append(
+          el('h3', null, 'Award selection criteria'),
+          el('p', 'hint', check.award_name),
+          el('p', check.status === 'found' ? 'ok' : 'warning', statusText[check.status]),
+        );
+        if (check.unreadable_page_count) {
+          card.append(el('p', 'hint', `Pages without extractable text: ${check.unreadable_page_count}`));
+        }
+        const citations = el('div', 'citations');
+        for (const citation of check.criteria_citations) {
+          citations.append(renderCitation('Criteria passage', citation, documentsById));
+        }
+        for (const citation of check.limitation_citations) {
+          citations.append(renderCitation('Stated limitation', citation, documentsById));
+        }
+        if (citations.childElementCount) card.append(citations);
+        cards.push(card);
+      }
+
+      findings.replaceChildren();
+      if (!cards.length) findings.append(el('p', 'hint', 'No possible discrepancies or checklist results for this review.'));
+      cards.forEach((card, index) => {
+        addDecision(card, index);
+        findings.append(card);
+      });
+      updateProgress();
+      reportDocumentList.replaceChildren(...data.documents.map(doc => {
+        const pages = doc.page_count === 1 ? '1 page' : `${doc.page_count} pages`;
+        return el('li', null, `${doc.filename} (${pages})`);
+      }));
+      caseReview.classList.add('has-review');
+      reviewResults.hidden = false;
+    }
+
+    window.addEventListener('beforeprint', () => {
+      for (const finding of findings.querySelectorAll('.finding')) {
+        const reviewed = finding.querySelector('input[type=checkbox]').checked;
+        finding.querySelector('.report-status').textContent = reviewed ? 'Reviewed' : 'Pending review';
+        const note = finding.querySelector('textarea').value;
+        const reportNote = finding.querySelector('.report-note');
+        reportNote.querySelector('p').textContent = note;
+        reportNote.hidden = !note.trim();
+      }
+    });
+
+    printReport.addEventListener('click', () => window.print());
+
+    async function submit(isReview) {
+      busy = true;
+      updateControls();
+      error.hidden = true;
+      state.textContent = isReview ? 'Reviewing evidence with local Ollama…' : 'Extracting page text…';
+      const form = new FormData();
+      for (const file of chosen) form.append('files', file);
+      if (isReview && awardName.value.trim()) {
+        form.append('award_selection_criteria_for', awardName.value.trim());
+      }
+      try {
+        const endpoint = isReview ? '/api/documents/review' : '/api/documents/upload';
+        const response = await fetch(endpoint, {method: 'POST', body: form});
+        const data = await response.json();
+        if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'The request failed.');
+        renderDocuments(data.documents);
+        if (isReview) renderFindings(data);
+        state.textContent = isReview ? 'Evidence review complete.' : 'Page text extracted.';
+      } catch (failure) {
+        error.textContent = failure.message;
+        error.hidden = false;
+        state.textContent = isReview ? 'Evidence review failed.' : 'Extraction failed.';
+      } finally {
+        busy = false;
+        updateControls();
+      }
+    }
+
+    review.addEventListener('click', () => submit(true));
+    upload.addEventListener('click', () => submit(false));
+  </script>
+</body>
+</html>
